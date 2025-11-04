@@ -240,13 +240,13 @@ Parameters can also be set via VAPIX API:
 
 ```bash
 # Set InfluxDB URL
-curl -u root:pass "http://<DEVICE_IP>/axis-cgi/param.cgi?action=update&root.CameraHealthMonitor.InfluxDBURL=http://influxdb.example.com:8086"
+curl -u root:pass "http://<AXIS_DEVICE_IP>/axis-cgi/param.cgi?action=update&root.CameraHealthMonitor.InfluxDBURL=http://influxdb.example.com:8086"
 
 # Enable sending
-curl -u root:pass "http://<DEVICE_IP>/axis-cgi/param.cgi?action=update&root.CameraHealthMonitor.EnableSending=yes"
+curl -u root:pass "http://<AXIS_DEVICE_IP>/axis-cgi/param.cgi?action=update&root.CameraHealthMonitor.EnableSending=yes"
 
 # Set collection interval
-curl -u root:pass "http://<DEVICE_IP>/axis-cgi/param.cgi?action=update&root.CameraHealthMonitor.CollectionInterval=120"
+curl -u root:pass "http://<AXIS_DEVICE_IP>/axis-cgi/param.cgi?action=update&root.CameraHealthMonitor.CollectionInterval=120"
 ```
 
 ### Modifying the Application

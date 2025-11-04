@@ -114,6 +114,8 @@ The examples are organized into logical groups to help you find the most relevan
   - An example in C that shows the use of the serial port API.
 - [axstorage](./axstorage/)
   - An example in C that shows how to use available storage devices.
+- [camera-health-monitor](./camera-health-monitor/)
+  - An example in C that collects camera health metrics (CPU, memory, network, device info) and sends them to InfluxDB for monitoring.
 - [licensekey](./licensekey/)
   - An example in C that illustrates how to check the licensekey status.
 - [message-broker](./message-broker/)

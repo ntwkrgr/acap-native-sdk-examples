@@ -58,16 +58,16 @@ typedef struct {
 } HealthMetrics;
 
 // Global variables
-static GMainLoop* main_loop = NULL;
-static Config config = {0};
+static GMainLoop* main_loop        = NULL;
+static Config config               = {0};
 static unsigned long prev_rx_bytes = 0;
 static unsigned long prev_tx_bytes = 0;
-static bool first_network_sample = true;
+static bool first_network_sample   = true;
 
 // Static CPU usage tracking
-static unsigned long long prev_idle = 0;
+static unsigned long long prev_idle  = 0;
 static unsigned long long prev_total = 0;
-static bool first_cpu_sample = true;
+static bool first_cpu_sample         = true;
 
 // Function to log and exit on fatal error
 static void panic(const char* msg) {
@@ -84,29 +84,37 @@ static double read_cpu_usage(void) {
     }
 
     unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
-    if (fscanf(fp, "cpu %llu %llu %llu %llu %llu %llu %llu %llu", &user, &nice,
-               &system, &idle, &iowait, &irq, &softirq, &steal) != 8) {
+    if (fscanf(fp,
+               "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
+               &user,
+               &nice,
+               &system,
+               &idle,
+               &iowait,
+               &irq,
+               &softirq,
+               &steal) != 8) {
         fclose(fp);
         syslog(LOG_WARNING, "Failed to parse /proc/stat");
         return 0.0;
     }
     fclose(fp);
 
-    unsigned long long total = user + nice + system + idle + iowait + irq + softirq + steal;
+    unsigned long long total      = user + nice + system + idle + iowait + irq + softirq + steal;
     unsigned long long total_idle = idle + iowait;
 
     if (first_cpu_sample) {
-        prev_total = total;
-        prev_idle = total_idle;
+        prev_total       = total;
+        prev_idle        = total_idle;
         first_cpu_sample = false;
         return 0.0;
     }
 
     unsigned long long diff_total = total - prev_total;
-    unsigned long long diff_idle = total_idle - prev_idle;
+    unsigned long long diff_idle  = total_idle - prev_idle;
 
     prev_total = total;
-    prev_idle = total_idle;
+    prev_idle  = total_idle;
 
     if (diff_total == 0) {
         return 0.0;
@@ -124,11 +132,11 @@ static void read_memory_info(HealthMetrics* metrics) {
     }
 
     char line[256];
-    unsigned long mem_total = 0;
-    unsigned long mem_free = 0;
+    unsigned long mem_total     = 0;
+    unsigned long mem_free      = 0;
     unsigned long mem_available = 0;
-    unsigned long buffers = 0;
-    unsigned long cached = 0;
+    unsigned long buffers       = 0;
+    unsigned long cached        = 0;
 
     while (fgets(line, sizeof(line), fp)) {
         if (sscanf(line, "MemTotal: %lu kB", &mem_total) == 1)
@@ -147,11 +155,11 @@ static void read_memory_info(HealthMetrics* metrics) {
     metrics->memory_total_kb = mem_total;
     if (mem_available > 0) {
         metrics->memory_available_kb = mem_available;
-        metrics->memory_used_kb = mem_total - mem_available;
+        metrics->memory_used_kb      = mem_total - mem_available;
     } else {
         // Fallback calculation if MemAvailable is not present
         metrics->memory_available_kb = mem_free + buffers + cached;
-        metrics->memory_used_kb = mem_total - metrics->memory_available_kb;
+        metrics->memory_used_kb      = mem_total - metrics->memory_available_kb;
     }
 
     if (mem_total > 0) {
@@ -198,16 +206,16 @@ static void read_network_stats(HealthMetrics* metrics) {
     fclose(fp);
 
     if (first_network_sample) {
-        prev_rx_bytes = rx_bytes;
-        prev_tx_bytes = tx_bytes;
-        first_network_sample = false;
+        prev_rx_bytes             = rx_bytes;
+        prev_tx_bytes             = tx_bytes;
+        first_network_sample      = false;
         metrics->network_rx_bytes = 0;
         metrics->network_tx_bytes = 0;
     } else {
         metrics->network_rx_bytes = rx_bytes - prev_rx_bytes;
         metrics->network_tx_bytes = tx_bytes - prev_tx_bytes;
-        prev_rx_bytes = rx_bytes;
-        prev_tx_bytes = tx_bytes;
+        prev_rx_bytes             = rx_bytes;
+        prev_tx_bytes             = tx_bytes;
     }
 }
 
@@ -233,7 +241,7 @@ static void read_device_info(HealthMetrics* metrics) {
     }
 
     // Read product full name
-    error = NULL;
+    error          = NULL;
     gchar* product = NULL;
     if (ax_parameter_get(ax_param, "Properties.System.ProductFullName", &product, &error)) {
         metrics->product_full_name = g_strdup(product);
@@ -246,13 +254,14 @@ static void read_device_info(HealthMetrics* metrics) {
     }
 
     // Read firmware version
-    error = NULL;
+    error           = NULL;
     gchar* firmware = NULL;
     if (ax_parameter_get(ax_param, "Properties.Firmware.Version", &firmware, &error)) {
         metrics->firmware_version = g_strdup(firmware);
         g_free(firmware);
     } else {
-        syslog(LOG_WARNING, "Failed to read firmware version: %s",
+        syslog(LOG_WARNING,
+               "Failed to read firmware version: %s",
                error ? error->message : "unknown");
         metrics->firmware_version = g_strdup("unknown");
         if (error)
@@ -285,10 +294,17 @@ static char* format_influxdb_line(HealthMetrics* metrics) {
         "camera_health,serial=%s,product=%s,firmware=%s "
         "cpu_usage=%.2f,memory_total=%lu,memory_used=%lu,memory_available=%lu,"
         "memory_usage_percent=%.2f,network_rx_bytes=%lu,network_tx_bytes=%lu %ld000000000",
-        metrics->serial_number, metrics->product_full_name, metrics->firmware_version,
-        metrics->cpu_usage, metrics->memory_total_kb, metrics->memory_used_kb,
-        metrics->memory_available_kb, metrics->memory_usage_percent, metrics->network_rx_bytes,
-        metrics->network_tx_bytes, now);
+        metrics->serial_number,
+        metrics->product_full_name,
+        metrics->firmware_version,
+        metrics->cpu_usage,
+        metrics->memory_total_kb,
+        metrics->memory_used_kb,
+        metrics->memory_available_kb,
+        metrics->memory_usage_percent,
+        metrics->network_rx_bytes,
+        metrics->network_tx_bytes,
+        now);
     return line;
 }
 
@@ -309,8 +325,12 @@ static void send_to_influxdb(const char* data) {
 
     // Construct the write URL
     char url[512];
-    snprintf(url, sizeof(url), "%s/api/v2/write?org=%s&bucket=%s", config.influxdb_url,
-             config.influxdb_org, config.influxdb_bucket);
+    snprintf(url,
+             sizeof(url),
+             "%s/api/v2/write?org=%s&bucket=%s",
+             config.influxdb_url,
+             config.influxdb_org,
+             config.influxdb_bucket);
 
     // Set up request headers
     struct curl_slist* headers = NULL;
@@ -360,8 +380,12 @@ static gboolean collect_and_send_metrics(gpointer user_data) {
     syslog(LOG_INFO,
            "Metrics: CPU=%.2f%%, Memory=%lu/%lu KB (%.2f%%), "
            "Network RX=%lu bytes, TX=%lu bytes",
-           metrics.cpu_usage, metrics.memory_used_kb, metrics.memory_total_kb,
-           metrics.memory_usage_percent, metrics.network_rx_bytes, metrics.network_tx_bytes);
+           metrics.cpu_usage,
+           metrics.memory_used_kb,
+           metrics.memory_total_kb,
+           metrics.memory_usage_percent,
+           metrics.network_rx_bytes,
+           metrics.network_tx_bytes);
 
     // Send to InfluxDB if enabled
     if (config.enable_sending) {
@@ -385,7 +409,7 @@ static void load_config(void) {
     }
 
     GError* error = NULL;
-    gchar* value = NULL;
+    gchar* value  = NULL;
 
     // Load InfluxDB URL
     if (ax_parameter_get(ax_param, "root.CameraHealthMonitor.InfluxDBURL", &value, &error)) {
@@ -466,9 +490,13 @@ static void load_config(void) {
 
     ax_parameter_free(ax_param);
 
-    syslog(LOG_INFO, "Configuration loaded: URL=%s, Org=%s, Bucket=%s, Interval=%d, Enabled=%s",
-           config.influxdb_url, config.influxdb_org, config.influxdb_bucket,
-           config.collection_interval, config.enable_sending ? "yes" : "no");
+    syslog(LOG_INFO,
+           "Configuration loaded: URL=%s, Org=%s, Bucket=%s, Interval=%d, Enabled=%s",
+           config.influxdb_url,
+           config.influxdb_org,
+           config.influxdb_bucket,
+           config.collection_interval,
+           config.enable_sending ? "yes" : "no");
 }
 
 // Free configuration
@@ -510,7 +538,8 @@ int main(void) {
     // Collect metrics once immediately
     collect_and_send_metrics(NULL);
 
-    syslog(LOG_INFO, "Camera Health Monitor running, collecting metrics every %d seconds",
+    syslog(LOG_INFO,
+           "Camera Health Monitor running, collecting metrics every %d seconds",
            config.collection_interval);
 
     // Run main loop

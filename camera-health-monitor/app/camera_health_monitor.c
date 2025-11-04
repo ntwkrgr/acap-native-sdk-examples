@@ -195,7 +195,7 @@ static void read_network_stats(HealthMetrics* metrics) {
     while (fgets(line, sizeof(line), fp)) {
         char iface[64];
         unsigned long rx, tx;
-        if (sscanf(line, "%s %lu %*u %*u %*u %*u %*u %*u %*u %lu", iface, &rx, &tx) == 3) {
+        if (sscanf(line, "%63s %lu %*u %*u %*u %*u %*u %*u %*u %lu", iface, &rx, &tx) == 3) {
             // Skip loopback interface
             if (strncmp(iface, "lo:", 3) != 0) {
                 rx_bytes += rx;
@@ -356,8 +356,10 @@ static void send_to_influxdb(const char* data) {
 
     if (!org_escaped || !bucket_escaped) {
         syslog(LOG_ERR, "Failed to URL encode parameters");
-        curl_free(org_escaped);
-        curl_free(bucket_escaped);
+        if (org_escaped)
+            curl_free(org_escaped);
+        if (bucket_escaped)
+            curl_free(bucket_escaped);
         curl_easy_cleanup(curl);
         return;
     }

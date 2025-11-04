@@ -114,6 +114,7 @@ docker build --tag <APP_IMAGE> --build-arg ARCH=<ARCH> .
 - `<ARCH>` is the SDK architecture, `armv7hf` or `aarch64`
 
 Example:
+
 ```sh
 docker build --tag camera_health_monitor:1.0 --build-arg ARCH=aarch64 .
 ```
@@ -125,13 +126,15 @@ docker cp $(docker create camera_health_monitor:1.0):/opt/app ./build
 ```
 
 The `build` directory will contain the ACAP application package:
+
 - `camera_health_monitor_1_0_0_aarch64.eap` (for aarch64)
 - `camera_health_monitor_1_0_0_armv7hf.eap` (for armv7hf)
 
 ### Install the Application
 
 1. Browse to your Axis device's application page:
-   ```
+
+   ```text
    http://<AXIS_DEVICE_IP>/index.html#apps
    ```
 
@@ -149,7 +152,7 @@ The `build` directory will contain the ACAP application package:
 
 Application logs can be accessed at:
 
-```
+```text
 http://<AXIS_DEVICE_IP>/axis-cgi/admin/systemlog.cgi?appname=camera_health_monitor
 ```
 
@@ -157,7 +160,7 @@ Or through the Apps page by clicking **App log**.
 
 ### Expected Log Output
 
-```
+```text
 [ INFO    ] camera_health_monitor[1234]: Camera Health Monitor starting...
 [ INFO    ] camera_health_monitor[1234]: Configuration loaded: URL=http://influxdb.example.com:8086, Org=myorg, Bucket=camera_health, Interval=60, Enabled=yes
 [ INFO    ] camera_health_monitor[1234]: Metrics: CPU=15.23%, Memory=45678/98304 KB (46.45%), Network RX=1024 bytes, TX=2048 bytes
@@ -196,13 +199,13 @@ Use InfluxDB's built-in visualization tools or Grafana to create dashboards:
 
 Metrics are sent in InfluxDB line protocol format:
 
-```
+```text
 camera_health,serial=<SERIAL>,product=<PRODUCT>,firmware=<VERSION> cpu_usage=<VALUE>,memory_total=<VALUE>,memory_used=<VALUE>,memory_available=<VALUE>,memory_usage_percent=<VALUE>,network_rx_bytes=<VALUE>,network_tx_bytes=<VALUE> <TIMESTAMP>
 ```
 
 ### Example Data Point
 
-```
+```text
 camera_health,serial=ACCC12345678,product=AXIS_P1375,firmware=11.6.67 cpu_usage=15.23,memory_total=98304,memory_used=45678,memory_available=52626,memory_usage_percent=46.45,network_rx_bytes=1024,network_tx_bytes=2048 1704067200000000000
 ```
 

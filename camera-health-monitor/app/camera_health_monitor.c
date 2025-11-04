@@ -287,16 +287,38 @@ static void free_health_metrics(HealthMetrics* metrics) {
     }
 }
 
+// Escape special characters for InfluxDB tag values
+static char* escape_influxdb_tag(const char* str) {
+    if (!str)
+        return g_strdup("unknown");
+
+    // Escape spaces, commas, and equals signs
+    GString* escaped = g_string_new("");
+    for (const char* p = str; *p; p++) {
+        if (*p == ' ' || *p == ',' || *p == '=') {
+            g_string_append_c(escaped, '\\');
+        }
+        g_string_append_c(escaped, *p);
+    }
+    return g_string_free(escaped, FALSE);
+}
+
 // Format metrics in InfluxDB line protocol
 static char* format_influxdb_line(HealthMetrics* metrics) {
     time_t now = time(NULL);
+
+    // Escape tag values
+    char* serial_escaped   = escape_influxdb_tag(metrics->serial_number);
+    char* product_escaped  = escape_influxdb_tag(metrics->product_full_name);
+    char* firmware_escaped = escape_influxdb_tag(metrics->firmware_version);
+
     char* line = g_strdup_printf(
         "camera_health,serial=%s,product=%s,firmware=%s "
         "cpu_usage=%.2f,memory_total=%lu,memory_used=%lu,memory_available=%lu,"
         "memory_usage_percent=%.2f,network_rx_bytes=%lu,network_tx_bytes=%lu %ld000000000",
-        metrics->serial_number,
-        metrics->product_full_name,
-        metrics->firmware_version,
+        serial_escaped,
+        product_escaped,
+        firmware_escaped,
         metrics->cpu_usage,
         metrics->memory_total_kb,
         metrics->memory_used_kb,
@@ -305,6 +327,11 @@ static char* format_influxdb_line(HealthMetrics* metrics) {
         metrics->network_rx_bytes,
         metrics->network_tx_bytes,
         now);
+
+    g_free(serial_escaped);
+    g_free(product_escaped);
+    g_free(firmware_escaped);
+
     return line;
 }
 
@@ -323,20 +350,31 @@ static void send_to_influxdb(const char* data) {
         return;
     }
 
-    // Construct the write URL
-    char url[512];
-    snprintf(url,
-             sizeof(url),
-             "%s/api/v2/write?org=%s&bucket=%s",
-             config.influxdb_url,
-             config.influxdb_org,
-             config.influxdb_bucket);
+    // URL encode organization and bucket names
+    char* org_escaped    = curl_easy_escape(curl, config.influxdb_org, 0);
+    char* bucket_escaped = curl_easy_escape(curl, config.influxdb_bucket, 0);
 
-    // Set up request headers
+    if (!org_escaped || !bucket_escaped) {
+        syslog(LOG_ERR, "Failed to URL encode parameters");
+        curl_free(org_escaped);
+        curl_free(bucket_escaped);
+        curl_easy_cleanup(curl);
+        return;
+    }
+
+    // Construct the write URL with escaped parameters
+    char* url = g_strdup_printf("%s/api/v2/write?org=%s&bucket=%s",
+                                config.influxdb_url,
+                                org_escaped,
+                                bucket_escaped);
+
+    curl_free(org_escaped);
+    curl_free(bucket_escaped);
+
+    // Set up request headers with dynamic allocation for auth header
     struct curl_slist* headers = NULL;
-    char auth_header[512];
-    snprintf(auth_header, sizeof(auth_header), "Authorization: Token %s", config.influxdb_token);
-    headers = curl_slist_append(headers, auth_header);
+    char* auth_header          = g_strdup_printf("Authorization: Token %s", config.influxdb_token);
+    headers                    = curl_slist_append(headers, auth_header);
     headers = curl_slist_append(headers, "Content-Type: text/plain; charset=utf-8");
 
     // Configure curl
@@ -360,6 +398,8 @@ static void send_to_influxdb(const char* data) {
         }
     }
 
+    g_free(url);
+    g_free(auth_header);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 }
@@ -465,7 +505,17 @@ static void load_config(void) {
     // Load collection interval
     value = NULL;
     if (ax_parameter_get(ax_param, "root.CameraHealthMonitor.CollectionInterval", &value, &error)) {
-        config.collection_interval = atoi(value);
+        char* endptr;
+        long interval = strtol(value, &endptr, 10);
+        // Validate: must be a valid number and within bounds
+        if (*endptr == '\0' && interval >= 10 && interval <= 3600) {
+            config.collection_interval = (int)interval;
+        } else {
+            syslog(LOG_WARNING,
+                   "Invalid collection interval '%s', using default 60 seconds",
+                   value);
+            config.collection_interval = 60;
+        }
         g_free(value);
     } else {
         config.collection_interval = 60;

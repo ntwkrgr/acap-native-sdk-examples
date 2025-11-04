@@ -1,0 +1,47 @@
+{
+    "schemaVersion": "1.8.0",
+    "acapPackageConf": {
+        "setup": {
+            "friendlyName": "Camera Health Monitor",
+            "appName": "camera_health_monitor",
+            "vendor": "Axis Communications",
+            "version": "1.0.0",
+            "runMode": "respawn",
+            "embeddedSdkVersion": "3.0"
+        },
+        "configuration": {
+            "paramConfig": [
+                {
+                    "name": "InfluxDBURL",
+                    "default": "http://localhost:8086",
+                    "type": "string"
+                },
+                {
+                    "name": "InfluxDBOrg",
+                    "default": "myorg",
+                    "type": "string"
+                },
+                {
+                    "name": "InfluxDBBucket",
+                    "default": "camera_health",
+                    "type": "string"
+                },
+                {
+                    "name": "InfluxDBToken",
+                    "default": "",
+                    "type": "hidden:string"
+                },
+                {
+                    "name": "CollectionInterval",
+                    "default": "60",
+                    "type": "string"
+                },
+                {
+                    "name": "EnableSending",
+                    "default": "no",
+                    "type": "bool:no,yes"
+                }
+            ]
+        }
+    }
+}

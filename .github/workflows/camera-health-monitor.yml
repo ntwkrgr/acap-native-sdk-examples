@@ -6,6 +6,10 @@ on:
       - 'camera-health-monitor/**'
       - '!camera-health-monitor/README.md'
       - '.github/workflows/camera-health-monitor.yml'
+
+permissions:
+  contents: read
+
 jobs:
   test-app:
     name: Test app
